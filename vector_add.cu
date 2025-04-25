@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <cuda_runtime.h>
 #define N 10000000
 
 __global__ void vector_add(float *out, float *a, float *b, int n) {
