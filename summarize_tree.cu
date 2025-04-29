@@ -87,16 +87,16 @@ void process_file(const char *path)
    * Update the number of regular files.
    * This is as simple as it seems. :-)
    */
-  pthread_mutex_lock(&m)
+  pthread_mutex_lock(&m);
   num_regular++;
-  pthread_mutex_unlock(&m)
+  pthread_mutex_unlock(&m);
 }
 
 void add_dir(const char *path)
 {
-  pthread_mutex_lock(&m)
+  pthread_mutex_lock(&m);
   num_dirs++;
-  pthread_mutex_unlock(&m)
+  pthread_mutex_unlock(&m);
 }
 
 void process_path(const char *path, int threadsPerBlock)
@@ -104,13 +104,13 @@ void process_path(const char *path, int threadsPerBlock)
   if (is_dir(path))
   {
     process_directory(path);
-    pthread_create(&m, NULL, add_dir, path)
-    pthread_join(m, NULL)
+    pthread_create(&m, NULL, add_dir, path);
+    pthread_join(m, NULL);
   }
   else
   {
-    pthread_create(&m, NULL, process_file, path)
-    pthread_join(m, NULL)
+    pthread_create(&m, NULL, process_file, path);
+    pthread_join(m, NULL);
     // process_file(path);
   }
 }
