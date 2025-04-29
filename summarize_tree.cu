@@ -5,8 +5,11 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
+#include <stdio.h>
 
 static int num_dirs, num_regular;
+pthread_mutex_t m;
 
 bool is_dir(const char *path)
 {
@@ -51,7 +54,7 @@ void process_directory(const char *path)
    * done.
    */
 
-  num_dirs++;
+  // num_dirs++;
   int chdir_err = chdir(path);
   if (chdir_err != 0)
   {
@@ -84,18 +87,31 @@ void process_file(const char *path)
    * Update the number of regular files.
    * This is as simple as it seems. :-)
    */
+  pthread_mutex_lock(&m)
   num_regular++;
+  pthread_mutex_unlock(&m)
 }
 
-void process_path(const char *path)
+void add_dir(const char *path)
+{
+  pthread_mutex_lock(&m)
+  num_dirs++;
+  pthread_mutex_unlock(&m)
+}
+
+void process_path(const char *path, int threadsPerBlock)
 {
   if (is_dir(path))
   {
     process_directory(path);
+    pthread_create(&m, NULL, add_dir, path)
+    pthread_join(m, NULL)
   }
   else
   {
-    process_file(path);
+    pthread_create(&m, NULL, process_file, path)
+    pthread_join(m, NULL)
+    // process_file(path);
   }
 }
 
