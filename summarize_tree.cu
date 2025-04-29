@@ -81,37 +81,32 @@ void process_directory(const char *path)
   }
 }
 
-void process_file(const char *path)
+__global__ void process_file(int num_regular)//const char *path)
 {
   /*
    * Update the number of regular files.
    * This is as simple as it seems. :-)
    */
-  pthread_mutex_lock(&m);
   num_regular++;
-  pthread_mutex_unlock(&m);
 }
 
-void add_dir(const char *path)
+__global__ void add_dir(num_dirs)
 {
-  pthread_mutex_lock(&m);
   num_dirs++;
-  pthread_mutex_unlock(&m);
 }
 
-void process_path(const char *path, int threadsPerBlock)
+void process_path(const char *path, int num_dirs, int num_regular)
 {
   if (is_dir(path))
   {
     process_directory(path);
-    pthread_create(&m, NULL, add_dir, path);
-    pthread_join(m, NULL);
+    add_dir<<<1,1>>>(num_dirs);
+    cudaDeviceSynchronize();
   }
   else
   {
-    pthread_create(&m, NULL, process_file, path);
-    pthread_join(m, NULL);
-    // process_file(path);
+    process_file<<<2,2>>>(num_regular);
+    cudaDeviceSynchronize();
   }
 }
 
@@ -125,13 +120,20 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  size_t bytes = 254;
+
+  int *num_dirs, *num_regular;
   num_dirs = 0;
   num_regular = 0;
+  cudaMalloc(&num_dirs, bytes);
+  cudaMalloc(&num_regular, bytes);
+  cudaMemcpy(num_dirs, NULL, bytes, cudeMemcpyHostToDevice);
+  cudaMemcpy(num_regular, NULL, bytes, cudeMemcpyHostToDevice);
 
-  process_path(argv[1]);
+  process_path(argv[1], num_dirs, num_regular);
 
-  printf("There were %d directories.\n", num_dirs);
-  printf("There were %d regular files.\n", num_regular);
+  printf("There were %d directories.\n", out[(out.length() -1)]); // probs. wrong index
+  printf("There were %d regular files.\n", out[(out.length() - 2)]); // probs. wrong index
 
   return 0;
 }
