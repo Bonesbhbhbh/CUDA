@@ -8,8 +8,6 @@
 #include <pthread.h>
 #include <stdio.h>
 
-static int num_dirs, num_regular;
-pthread_mutex_t m;
 
 bool is_dir(const char *path)
 {
@@ -81,21 +79,23 @@ void process_directory(const char *path)
   }
 }
 
-__global__ void process_file(int num_regular)//const char *path)
+__global__ void process_file(int *num_regular) //const char *path)
 {
   /*
    * Update the number of regular files.
    * This is as simple as it seems. :-)
    */
+  //atomicAdd(num_regular, 1);
   num_regular++;
 }
 
-__global__ void add_dir(num_dirs)
+__global__ void add_dir(int *num_dirs)
 {
+  //atomicAdd(num_dirs, 1);
   num_dirs++;
 }
 
-void process_path(const char *path, int num_dirs, int num_regular)
+void process_path(const char *path, int *num_dirs, int *num_regular)
 {
   if (is_dir(path))
   {
@@ -119,21 +119,31 @@ int main(int argc, char *argv[])
     printf("       where <path> is the file or root of the tree you want to summarize.\n");
     return 1;
   }
+  // Initialize values
+  int host_num_dirs = 0, host_num_regular = 0; // where we will store results
+  int *num_dirs, *num_regular; // (defaults to 0)
+  // allocate memory
+  cudaMalloc(&num_dirs, sizeof(int));
+  cudaMalloc(&num_regular, sizeof(int));
+  // copy values to device
+  cudaMemcpy(num_dirs, &host_num_dirs, sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(num_regular, &host_num_regular, sizeof(int), cudaMemcpyHostToDevice);
 
-  size_t bytes = 254;
-
-  int *num_dirs, *num_regular;
-  num_dirs = 0;
-  num_regular = 0;
-  cudaMalloc(&num_dirs, bytes);
-  cudaMalloc(&num_regular, bytes);
-  cudaMemcpy(num_dirs, NULL, bytes, cudeMemcpyHostToDevice);
-  cudaMemcpy(num_regular, NULL, bytes, cudeMemcpyHostToDevice);
-
+  // run target function
   process_path(argv[1], num_dirs, num_regular);
 
-  printf("There were %d directories.\n", out[(out.length() -1)]); // probs. wrong index
-  printf("There were %d regular files.\n", out[(out.length() - 2)]); // probs. wrong index
+  // copy values back to host
+  cudaMemcpy(&host_num_dirs, num_dirs, sizeof(int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&host_num_regular, num_regular, sizeof(int), cudaMemcpyDeviceToHost);
+
+  // print results
+  printf("There were %d directories.\n", host_num_dirs); 
+  printf("There were %d regular files.\n", host_num_regular); 
+
+  // free memory
+  cudaFree(num_dirs);
+  cudaFree(num_regular);
+  // we don't need to free the host versions because they are dynamically allocated
 
   return 0;
 }

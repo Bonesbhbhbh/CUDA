@@ -79,10 +79,10 @@ void process_path(const char* path) {
             exit(1);
         }
         fseek(file, 0, SEEK_END); // reading files in CUDA
-        int size = ftell(file); // ftell() returns location of pointer to file
-        fseek(file, 0, SEEK_SET);
-        char* data = (char*)malloc(size);
-        fread(data, 1, size, file);
+        int size = ftell(file); // `ftell()` returns location of pointer in file (this will be at end of first word?)
+        fseek(file, 0, SEEK_SET); // sets pointer in file to 0
+        char* data = (char*)malloc(size); // creates memory with size of first word in file
+        fread(data, 1, size, file); // does nothing?
         fclose(file);
         char* d_data;
         int* d_result;
